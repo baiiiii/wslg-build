@@ -63,6 +63,14 @@ int main(void)
 	Window o;
 
 	setlocale(LC_ALL, "");
+	printf("LANG=%s LC_ALL=%s\n",
+	       getenv("LANG") ? getenv("LANG") : "(unset)",
+	       getenv("LC_ALL") ? getenv("LC_ALL") : "(unset)");
+	printf("setlocale(LC_ALL,\"\") = %s\n", setlocale(LC_ALL, ""));
+	printf("XSupportsLocale = %d\n", XSupportsLocale());
+	printf("XSetLocaleModifiers(\"\") = %s\n", XSetLocaleModifiers(""));
+	printf("XSetLocaleModifiers(@im=wslg-xim) = %s\n",
+	       XSetLocaleModifiers("@im=wslg-xim"));
 	d = XOpenDisplay(NULL);
 	if (!d) {
 		printf("XOpenDisplay failed for DISPLAY=%s\n",
