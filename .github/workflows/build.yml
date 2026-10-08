@@ -1,0 +1,69 @@
+name: Build WSLg Custom Image
+
+on:
+  workflow_dispatch:
+
+env:
+  WSLG_TAG: v1.0.79
+  WESTON_REF: feature/IME
+  FREERDP_REF: working
+  PULSEAUDIO_REF: c33051f2296af748ac5cd13e51abfac4d129e4c7
+  MESA_REF: mesa-23.1.0
+  DIRECTX_REF: v1.608.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: 安装 Go（tar2ext4 由构建脚本通过 go run 拉取）
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: 克隆 WSLg 与各组件源码
+        run: |
+          set -euo pipefail
+          git clone --branch "$WSLG_TAG" --depth 1 https://github.com/microsoft/wslg.git wslg
+          cd wslg
+
+          git clone https://github.com/baiiiii/weston-mirror      vendor/weston
+          git clone https://github.com/microsoft/FreeRDP-mirror     vendor/FreeRDP
+          git clone https://github.com/microsoft/PulseAudio-mirror  vendor/pulseaudio
+          git clone -b "$DIRECTX_REF" https://github.com/microsoft/DirectX-Headers.git vendor/DirectX-Headers-1.0
+          git clone -b "$MESA_REF"    https://gitlab.freedesktop.org/mesa/mesa.git     vendor/mesa
+
+          git -C vendor/weston     checkout "$WESTON_REF"
+          git -C vendor/FreeRDP    checkout "$FREERDP_REF"
+          git -C vendor/pulseaudio checkout "$PULSEAUDIO_REF"
+
+          echo "=== 各组件实际使用的版本 ==="
+          for d in weston FreeRDP pulseaudio mesa DirectX-Headers-1.0; do
+            printf '%-24s %s\n' "$d" "$(git -C "vendor/$d" rev-parse HEAD)"
+          done
+
+      - name: 构建 system distro 镜像
+        run: |
+          set -euo pipefail
+          cd wslg
+          chmod +x build-and-export.sh devops/get-nuget-version.sh 2>/dev/null || true
+          bash build-and-export.sh
+
+      - name: 发布到 Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build
+          name: WSLg IME Build
+          files: wslg/system_x64.vhd
+          draft: false
+          overwrite_files: true
+          body: |
+            | 文件 | 说明 |
+            |---|---|
+            | `WSLDVCPlugin.dll` | Windows 侧插件（WSLg 的 DVC 插件，实现文本输入桥） |
+            | `system_x64.vhd` | WSLg 的 system distro 镜像（内含改造过的 weston） |

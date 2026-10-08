@@ -1,0 +1,44 @@
+name: Build WSLDVCPlugin
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 克隆 WSLDVCPlugin 源码
+        shell: bash
+        run: git clone --branch feature/IME https://github.com/baiiiii/wslg.git wslg
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Generate version resource (UpdateRCVersion)
+        shell: pwsh
+        run: |
+          cd wslg\WSLDVCPlugin
+          .\UpdateRCVersion.ps1 -separator "."
+
+      - name: MSBuild x64 Release
+        shell: cmd
+        run: msbuild /restore wslg\WSLDVCPlugin\WSLDVCPlugin.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SpectreMitigation=false /m
+
+      - name: 发布到 Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build
+          name: WSLg IME Build
+          files: wslg/WSLDVCPlugin/**/WSLDVCPlugin.dll
+          draft: false
+          overwrite_files: true
+          body: |
+            | 文件 | 说明 |
+            |---|---|
+            | `WSLDVCPlugin.dll` | Windows 侧插件（WSLg 的 DVC 插件，实现文本输入桥） |
+            | `system_x64.vhd` | WSLg 的 system distro 镜像（内含改造过的 weston） |
