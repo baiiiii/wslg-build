@@ -11,6 +11,7 @@
 |---|---|
 | `WSLDVCPlugin.dll` | Windows 侧插件（WSLg 的 DVC 插件，实现文本输入桥） |
 | `system_x64.vhd` | WSLg 的 system distro 镜像（内含改造过的 weston） |
+| `system_x64_patch.vhd` | weston 功能优化 |
 
 ---
 
@@ -136,10 +137,10 @@ MS-RDPETXT 规格点名 `TextInput_ServerToClientDVC` / `TextInput_ClientToServe
 但实测在 WSLg 会话中**规格通道上没有活着的客户端**：
 
 `rdclientax.dll` 内置的官方客户端（`RemoteTextPlugin`）占着规格名，
-   却被 `/wslg` 模式的产品门闸强制关闭 ——
-   `msrdc.exe` 的 `/wslg` 开关会设置 `TS_PROP_CORE_WSLGMODE_ENABLED`，
-   引擎据此把 `EnableTextProcessingRedirection` 派生为 `0`，
-   并打印 `Text processing redirection is disabled for this connection.` 后返回 `E_ACCESSDENIED`；
+却被 `/wslg` 模式的产品门闸强制关闭 ——
+`msrdc.exe` 的 `/wslg` 开关会设置 `TS_PROP_CORE_WSLGMODE_ENABLED`，
+引擎据此把 `EnableTextProcessingRedirection` 派生为 `0`，
+并打印 `Text processing redirection is disabled for this connection.` 后返回 `E_ACCESSDENIED`；
 
 因此本方案改用**私有通道名**，由自己的插件监听，绕开该门闸。
 
@@ -148,6 +149,22 @@ MS-RDPETXT 规格点名 `TextInput_ServerToClientDVC` / `TextInput_ClientToServe
 * 仅支持 WSLg（依赖 `/wslg` 模式下的 hvsocket + 共享内存传输）；
 * 需要替换 WSLg 的 system distro 镜像，**Windows 或 WSL 更新后可能需要重新部署**；
 * 与微软官方 RDPETXT 客户端不互通（它们是两套独立实现）。
+
+---
+
+## 五、weston 功能优化
+
+[https://github.com/weihanhan/wslg_custom](https://github.com/weihanhan/wslg_custom)
+
+- X11 窗口边框调整
+  - 点击左上角标题栏图标可在浅色/深色间切换，默认为深色。
+  - 替换了标题栏的图标。
+  - 消除左、下、右三处的白色边框。
+- `Alt+F12` 在"标题栏模式"和"无边框模式"之间切换，默认为"标题栏模式"。
+- `Alt+F11` 在窗口化和最大化之间切换。
+- `Alt+鼠标左键` 拖动调整窗口大小。
+- `Alt+鼠标右键` 拖动移动窗口。
+- 支持从 Windows 剪贴板粘贴图片到 WSLg 窗口。
 
 ---
 

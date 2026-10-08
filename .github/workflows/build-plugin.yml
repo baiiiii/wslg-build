@@ -37,8 +37,4 @@ jobs:
           files: wslg/WSLDVCPlugin/**/WSLDVCPlugin.dll
           draft: false
           overwrite_files: true
-          body: |
-            | 文件 | 说明 |
-            |---|---|
-            | `WSLDVCPlugin.dll` | Windows 侧插件（WSLg 的 DVC 插件，实现文本输入桥） |
-            | `system_x64.vhd` | WSLg 的 system distro 镜像（内含改造过的 weston） |
+          body: https://github.com/baiiiii/wslg-build/blob/main/README.md

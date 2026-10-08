@@ -1,4 +1,4 @@
-name: Build WSLg Custom Image
+name: Build WSLg Custom Image Patch
 
 on:
   workflow_dispatch:
@@ -20,6 +20,9 @@ jobs:
     timeout-minutes: 350
 
     steps:
+      - name: 检出本仓库
+        uses: actions/checkout@v4
+
       - name: 安装 Go（tar2ext4 由构建脚本通过 go run 拉取）
         uses: actions/setup-go@v5
         with:
@@ -47,6 +50,38 @@ jobs:
             printf '%-24s %s\n' "$d" "$(git -C "vendor/$d" rev-parse HEAD)"
           done
 
+      - name: 给 weston-mirror 应用 patch
+        run: |
+          set -euo pipefail
+          PATCH="$GITHUB_WORKSPACE/weston.patch"
+
+          if [ ! -f "$PATCH" ]; then
+            echo "找不到补丁文件：$PATCH" >&2
+            echo "请确认补丁已提交到本仓库。" >&2
+            exit 1
+          fi
+          echo "补丁文件：$PATCH"
+          sha256sum "$PATCH"
+
+          # 补丁若在 Windows 侧被存成 CRLF，先归一化为 LF 副本再应用，避免改动仓库文件
+          PATCH_LF=$(mktemp)
+          sed 's/\r$//' "$PATCH" > "$PATCH_LF"
+
+          cd wslg/vendor/weston
+          BASE=$(git rev-parse HEAD)
+
+          if git apply --check --reverse "$PATCH_LF" 2>/dev/null; then
+            echo "补丁已包含在 $WESTON_REF（$BASE）中，跳过应用"
+          elif git apply --verbose --whitespace=nowarn "$PATCH_LF"; then
+            echo "补丁已应用到 $WESTON_REF（基准提交 $BASE）"
+          else
+            echo "补丁应用失败：$WESTON_REF 可能已更新，请基于最新分支重新生成" >&2
+            exit 1
+          fi
+
+          echo "=== 应用补丁后的改动 ==="
+          git status --short --untracked-files=all
+
       - name: 构建 system distro 镜像
         run: |
           set -euo pipefail
@@ -54,12 +89,18 @@ jobs:
           chmod +x build-and-export.sh devops/get-nuget-version.sh 2>/dev/null || true
           bash build-and-export.sh
 
+      - name: 重命名产物为 system_x64_patch.vhd
+        run: |
+          set -euo pipefail
+          mv wslg/system_x64.vhd wslg/system_x64_patch.vhd
+          ls -lh wslg/system_x64_patch.vhd
+
       - name: 发布到 Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build
           name: WSLg IME Build
-          files: wslg/system_x64.vhd
+          files: wslg/system_x64_patch.vhd
           draft: false
           overwrite_files: true
           body: https://github.com/baiiiii/wslg-build/blob/main/README.md
