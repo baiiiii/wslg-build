@@ -14,6 +14,7 @@
 | `WSLDVCPlugin.dll` | Windows 侧插件（WSLg 的 DVC 插件，实现文本输入桥） |
 | `system_x64.vhd` | WSLg 的 system distro 镜像（内含改造过的 weston） |
 | `system_x64_patch.vhd` | weston 功能优化，包含输入法桥接，推荐使用此版本 |
+| `system_x64_xim.vhd` | 增加 XIM 桥接支持 X11 应用，包含 weston 功能优化 |
 
 ---
 
@@ -52,8 +53,6 @@ wsl --shutdown
 
 ## 二、图形应用的配置建议（重要）
 
-**总原则**：**应用走 Wayland，输入法就能用 ✓；走 X11，就要靠 XIM ✗（本方案尚未支持）**。
-
 | 应用 | 需要做的 |
 |---|---|
 | **GTK 3/4**（gedit、Nautilus、GNOME 系） | **默认就走 Wayland ✓ 通常无需配置** |
@@ -62,7 +61,7 @@ wsl --shutdown
 | **Electron 系**（VS Code、Discord、Obsidian…） | 见下方三个开关 |
 | **Firefox** | `export MOZ_ENABLE_WAYLAND=1` |
 | **JetBrains IDE** | VmOptions 中添加配置 `-Dawt.toolkit.name=WLToolkit` |
-| **Java（Swing/AWT）/ 老 X11 程序** | ✗ **无解**——它们只认 XIM |
+| **Java（Swing/AWT）/ X11 程序** | `env GTK_IM_MODULE=xim QT_IM_MODULE=xim XMODIFIERS=@im=wslgxim` |
 
 ### Chromium / Electron 的三个开关
 
@@ -74,7 +73,7 @@ wsl --shutdown
 
 * **第三个开关和本方案正好对口** ✓——桥实现的就是 `zwp_text_input_v3`：
   `set_cursor_rectangle` → 候选窗跟随 ✓；`commit_string` → 中文上屏 ✓。
-* **不加这三个开关**，Chromium 走 X11，就只能靠 XIM，**当前不可用**。
+* **不加这三个开关**，Chromium 走 X11，就只能靠 XIM。
 
 ```bash
 chromium --ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=3
