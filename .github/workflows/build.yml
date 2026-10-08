@@ -23,7 +23,7 @@ jobs:
       - name: 安装 Go（tar2ext4 由构建脚本通过 go run 拉取）
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.23'
           cache: false
 
       - name: 克隆 WSLg 与各组件源码
