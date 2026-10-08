@@ -86,6 +86,22 @@ int main(void)
 	o = XGetSelectionOwner(d, XInternAtom(d, "wslg-xim", False));
 	printf("XGetSelectionOwner(wslg-xim) = 0x%lx\n", (unsigned long)o);
 
+	{
+		XClientMessageEvent ev;
+		memset(&ev, 0, sizeof ev);
+		ev.type = ClientMessage;
+		ev.display = d;
+		ev.window = o;
+		ev.message_type = XInternAtom(d, "_XIM_XCONNECT", False);
+		ev.format = 32;
+		ev.data.l[0] = 0;
+		printf("sending test ClientMessage to 0x%lx (type=0x%lx)\n",
+		       (unsigned long)ev.window, (unsigned long)ev.message_type);
+		XSendEvent(d, ev.window, False, NoEventMask, (XEvent *)&ev);
+		XSync(d, False);
+		printf("test ClientMessage sent\n");
+	}
+
 	dump_xim_servers(d);
 	probe(d, "");
 	probe(d, "@im=wslg-xim");
