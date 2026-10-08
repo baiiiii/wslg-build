@@ -1,0 +1,82 @@
+name: Build XIM test client
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc libx11-dev
+
+      - name: Write the client
+        run: |
+          cat > ximtest.c <<'CEOF'
+          #include <stdio.h>
+          #include <stdlib.h>
+          #include <string.h>
+          #include <locale.h>
+          #include <X11/Xlib.h>
+          #include <X11/Xlocale.h>
+
+          static void probe(Display *d, const char *mods)
+          {
+              XIM im;
+              XIC ic;
+              char *p;
+
+              XSetLocaleModifiers(mods);
+              im = XOpenIM(d, NULL, NULL, NULL);
+              printf("  modifiers=\"%s\" XOpenIM=%s\n", mods, im ? "OK" : "failed");
+              if (!im)
+                      return;
+              p = XGetIMValues(im, XNQueryInputStyle, NULL);
+              printf("  input style = 0x%lx\n", p ? (unsigned long)(long)p : 0UL);
+              ic = XCreateIC(im, XNInputStyle,
+                             XIMPreeditNothing | XIMStatusNothing,
+                             XNClientWindow, DefaultRootWindow(d),
+                             XNFocusWindow, DefaultRootWindow(d), NULL);
+              printf("  XCreateIC=%s\n", ic ? "OK" : "failed");
+              if (ic) {
+                      XSetICFocus(ic);
+                      printf("  XSetICFocus done\n");
+              }
+              XSync(d, False);
+          }
+
+          int main(void)
+          {
+              Display *d;
+
+              setlocale(LC_ALL, "");
+              d = XOpenDisplay(NULL);
+              if (!d) {
+                      printf("XOpenDisplay failed for DISPLAY=%s\n",
+                             getenv("DISPLAY") ? getenv("DISPLAY") : "(unset)");
+                      return 1;
+              }
+              printf("XOpenDisplay OK: %s\n", DisplayString(d));
+              printf("XMODIFIERS=%s\n",
+                     getenv("XMODIFIERS") ? getenv("XMODIFIERS") : "(unset)");
+              probe(d, "");
+              probe(d, "@im=wslg-xim");
+              XCloseDisplay(d);
+              printf("done\n");
+              return 0;
+          }
+          CEOF
+          gcc -O1 -o ximtest ximtest.c -lX11
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ximtest
+          path: ximtest
+          retention-days: 30
