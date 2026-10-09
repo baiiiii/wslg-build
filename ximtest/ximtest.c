@@ -121,7 +121,56 @@ int main(void)
 		ev.message_type = XInternAtom(d, "_XIM_XCONNECT", False);
 		ev.format = 32;
 		ev.data.l[0] = 0;
-		printf("=== PROBE FIRST (clean property) ===");
+		printf("sending test ClientMessage to 0x%lx (type=0x%lx)\n",
+		       (unsigned long)ev.window, (unsigned long)ev.message_type);
+		XSendEvent(d, ev.window, False, NoEventMask, (XEvent *)&ev);
+		XSync(d, False);
+		printf("test ClientMessage sent\n");
+	}
+
+	{
+		Window cw = XCreateSimpleWindow(d, DefaultRootWindow(d),
+						0, 0, 1, 1, 0, 0, 0);
+		Atom xc = XInternAtom(d, "_XIM_XCONNECT", False);
+		XClientMessageEvent h;
+		int k, seen = 0;
+
+		printf("--- proper handshake: our comm window = 0x%lx ---\n",
+		       (unsigned long)cw);
+		memset(&h, 0, sizeof h);
+		h.type = ClientMessage;
+		h.display = d;
+		h.window = cw;
+		h.message_type = xc;
+		h.format = 32;
+		h.data.l[0] = (long)cw;
+		XSendEvent(d, o, False, NoEventMask, (XEvent *)&h);
+		XSync(d, False);
+		printf("--- polling for replies (8s) ---\n");
+		for (k = 0; k < 160; k++) {
+			while (XPending(d)) {
+				XEvent e;
+				XNextEvent(d, &e);
+				if (e.type == ClientMessage) {
+					seen++;
+					printf("  REPLY win=0x%lx type=0x%lx fmt=%d"
+					       " d0=0x%lx d1=0x%lx d4=0x%lx\n",
+					       (unsigned long)e.xclient.window,
+					       (unsigned long)e.xclient.message_type,
+					       e.xclient.format,
+					       (unsigned long)e.xclient.data.l[0],
+					       (unsigned long)e.xclient.data.l[1],
+					       (unsigned long)e.xclient.data.l[4]);
+				} else {
+					printf("  event type=%d\n", e.type);
+				}
+			}
+			usleep(50000);
+		}
+		printf("--- replies seen: %d ---\n", seen);
+	}
+
+	printf("=== PROBE FIRST (clean property) ===");
 	printf("\n");
 	XSetErrorHandler(err_handler);
 	XSync(d, False);
