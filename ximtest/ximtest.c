@@ -134,6 +134,28 @@ int main(void)
 	XSync(d, False);
 	probe(d, "");
 	probe(d, "@im=wslg-xim");
+
+	printf("--- self-server experiment ---\n");
+	{
+		Window w = XCreateSimpleWindow(d, DefaultRootWindow(d),
+					       0, 0, 1, 1, 0, 0, 0);
+		Atom nm = XInternAtom(d, "ximtest-srv", False);
+		Atom pr = XInternAtom(d, "XIM_SERVERS", False);
+		XIM sim;
+
+		XSetSelectionOwner(d, nm, w, CurrentTime);
+		XChangeProperty(d, DefaultRootWindow(d), pr, XA_ATOM, 32,
+				PropModeReplace, (unsigned char *)&nm, 1);
+		XSync(d, False);
+		printf("  window=0x%lx atom=0x%lx owner=0x%lx\n",
+		       (unsigned long)w, (unsigned long)nm,
+		       (unsigned long)XGetSelectionOwner(d, nm));
+		XSetLocaleModifiers("@im=ximtest-srv");
+		sim = XOpenIM(d, NULL, NULL, NULL);
+		printf("  XOpenIM(self-server)=%s\n", sim ? "OK" : "failed");
+		if (sim)
+			printf("  *** XIM WORKS: the client side is fine ***\n");
+	}
 	XCloseDisplay(d);
 	printf("done\n");
 	return 0;
