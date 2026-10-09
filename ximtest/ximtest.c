@@ -139,7 +139,7 @@ int main(void)
 	{
 		Window w = XCreateSimpleWindow(d, DefaultRootWindow(d),
 					       0, 0, 1, 1, 0, 0, 0);
-		Atom nm = XInternAtom(d, "ximtest-srv", False);
+		Atom nm = XInternAtom(d, "@server=ximtest-srv", False);
 		Atom pr = XInternAtom(d, "XIM_SERVERS", False);
 		XIM sim;
 
