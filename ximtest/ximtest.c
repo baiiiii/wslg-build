@@ -41,10 +41,16 @@ static void probe(Display *d, const char *mods)
 {
 	XIM im;
 	XIC ic;
+	const char *m;
 
-	XSetLocaleModifiers(mods);
-	im = XOpenIM(d, NULL, NULL, NULL);
-	printf("  modifiers=\"%s\" XOpenIM=%s\n", mods, im ? "OK" : "failed");
+	m = XSetLocaleModifiers(mods);
+	printf("  modifiers=\"%s\" -> \"%s\"\n", mods, m ? m : "(null)");
+	im = XOpenIM(d, "ximtest", "Ximtest", NULL);
+	printf("  XOpenIM(with res) = %s\n", im ? "OK" : "failed");
+	if (!im) {
+		im = XOpenIM(d, NULL, NULL, NULL);
+		printf("  XOpenIM(NULL res) = %s\n", im ? "OK" : "failed");
+	}
 	if (!im)
 		return;
 	ic = XCreateIC(im, XNInputStyle,
