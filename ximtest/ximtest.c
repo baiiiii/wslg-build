@@ -170,12 +170,19 @@ int main(void)
 		printf("--- replies seen: %d ---\n", seen);
 	}
 
-	dump_xim_servers(d);
-	printf("--- installing error handler ---\n");
+	printf("=== PROBE FIRST (clean property) ===");
+	printf("\n");
 	XSetErrorHandler(err_handler);
 	XSync(d, False);
 	probe(d, "");
 	probe(d, "@im=wslg-xim");
+	printf("=== PROBE DONE ===");
+	printf("\n");
+
+	dump_xim_servers(d);
+	printf("--- installing error handler ---\n");
+	XSetErrorHandler(err_handler);
+	XSync(d, False);
 
 	printf("--- self-server experiment ---\n");
 	{
