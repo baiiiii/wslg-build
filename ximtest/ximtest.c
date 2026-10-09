@@ -37,6 +37,26 @@ static void dump_xim_servers(Display *d)
 	}
 }
 
+static int err_handler(Display *d, XErrorEvent *e)
+{
+	char buf[256];
+	char msg[128];
+	char req[64];
+	char num[64];
+
+	(void)d;
+	XGetErrorText(d, e->error_code, buf, sizeof buf);
+	snprintf(msg, sizeof msg, "%s", buf);
+	XGetErrorDatabaseText(d, "XRequest", "nosuch", "?", req, sizeof req);
+	snprintf(num, sizeof num, "%d", e->request_code);
+	XGetErrorDatabaseText(d, "XRequest", num, req, req, sizeof req);
+	printf("  [X ERROR] request=%s(%d) error=%d(%s) resource=0x%lx serial=%lu\n",
+	       req, e->request_code, e->error_code, msg,
+	       (unsigned long)e->resourceid, e->serial);
+	fflush(stdout);
+	return 0;
+}
+
 static void probe(Display *d, const char *mods)
 {
 	XIM im;
@@ -109,6 +129,9 @@ int main(void)
 	}
 
 	dump_xim_servers(d);
+	printf("--- installing error handler ---\n");
+	XSetErrorHandler(err_handler);
+	XSync(d, False);
 	probe(d, "");
 	probe(d, "@im=wslg-xim");
 	XCloseDisplay(d);
