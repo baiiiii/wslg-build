@@ -170,6 +170,25 @@ int main(void)
 		printf("--- replies seen: %d ---\n", seen);
 	}
 
+	{
+		Window ow = XGetSelectionOwner(d, XInternAtom(d, "wslg-xim", False));
+		Atom pa = XInternAtom(d, "XIM_SERVERS", False);
+		Atom ty = None; int fm = 0; unsigned long ni = 0, af = 0;
+		unsigned char *dt = NULL;
+		printf("=== OWNER CHECK: XGetSelectionOwner(wslg-xim)=0x%lx ===\n",
+			   (unsigned long)ow);
+		if (XGetWindowProperty(d, DefaultRootWindow(d), pa, 0, 64, False,
+				   XA_ATOM, &ty, &fm, &ni, &af, &dt) == Success && dt) {
+			unsigned long z;
+			for (z = 0; z < ni; z++) {
+				Atom a2 = ((Atom *)dt)[z];
+				printf("    item[%lu] atom=0x%lx owner=0x%lx\n", z,
+					   (unsigned long)a2,
+					   (unsigned long)XGetSelectionOwner(d, a2));
+			}
+			XFree(dt);
+		}
+	}
 	printf("=== PROBE FIRST (clean property) ===");
 	printf("\n");
 	XSetErrorHandler(err_handler);
